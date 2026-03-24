@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Scan image with SARIF output
+        id: trivy-scan
+        uses: 'lhotari/sandboxed-trivy-action@65a6f8b92d57b178ccde7e1916c049dcd5672315'
+        continue-on-error: true
+        with:
+          scan-type: 'image'
+          scan-ref: 'alpine:3'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Verify SARIF file was created
+        run: |
+          test -f trivy-results.sarif
+          echo "SARIF file size: $(wc -c < trivy-results.sarif) bytes"
+          jq '.runs[0].tool.driver.name' trivy-results.sarif
